@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# How Many Lines?
+
+A sleek web application to count lines of code in public Git repositories. Built with Next.js and Tailwind CSS.
+
+![App Demo](C:/Users/Jonathan/.gemini/antigravity/brain/d1d1d026-53a5-47d8-837b-4188719c56da/app_demo_1764607655956.webp)
+
+## Features
+
+*   **Detailed Analysis**: Counts total lines of code and breaks them down by language.
+*   **Fast & Cached**: Results are cached (In-Memory or Redis) for instant subsequent access.
+*   **Dark/Light Mode**: Automatically adapts to your system preference.
+*   **Responsive Design**: Works seamlessly on desktop and mobile.
+
+
+## Tech Stack
+
+*   **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+*   **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+*   **Git Operations**: [isomorphic-git](https://isomorphic-git.org/)
+*   **Caching**: `lru-cache` (Memory) & `ioredis` (Redis)
+*   **Icons**: `react-icons` & `lucide-react`
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+*   Node.js 18+
+*   npm or yarn
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/yourusername/how-many-lines.git
+    cd how-many-lines
+    ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
 
-## Learn More
+3.  **Configure Environment Variables**:
+    Copy `env.example` to `.env.local` and adjust settings if needed.
+    ```bash
+    cp env.example .env.local
+    ```
+    
+    **Key Variables:**
+    *   `ALLOWED_DOMAINS`: Comma-separated list of allowed git providers.
+    *   `MAX_FILE_SIZE_BYTES`: Max size for individual files (default: 1MB).
+    *   `MAX_REPO_SIZE_BYTES`: Max size for the entire repository download (default: 100MB).
+    *   `CACHE_TTL_SECONDS`: Duration to cache results (default: 24h).
+    *   `REDIS_URL`: (Optional) Connection string for Redis.
 
-To learn more about Next.js, take a look at the following resources:
+4.  **Run the development server**:
+    ```bash
+    npm run dev
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+5.  **Open the app**:
+    Navigate to [http://localhost:3000](http://localhost:3000).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
