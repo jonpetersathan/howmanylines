@@ -4,6 +4,7 @@ import http from 'isomorphic-git/http/node';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import { cache } from '@/lib/cache';
 
 // Security Constants
 const ALLOWED_DOMAINS = process.env.ALLOWED_DOMAINS
@@ -41,6 +42,14 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
+    // 2. Check Cache
+    const cacheKey = `repo:${repoUrl}`;
+    const cachedData = await cache.get(cacheKey);
+    if (cachedData) {
+      console.log(`Cache hit for ${repoUrl}`);
+      return NextResponse.json(cachedData);
+    }
+
     // Create a temporary directory
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'git-line-counter-'));
 
@@ -71,7 +80,7 @@ export async function POST(request: Request) {
         if (stat.isDirectory()) {
           await traverse(filePath);
         } else if (stat.isFile()) {
-          // 2. Resource Limits (DoS Protection)
+          // 3. Resource Limits (DoS Protection)
           if (stat.size > MAX_FILE_SIZE_BYTES) {
             console.warn(`Skipping large file ${filePath} (${stat.size} bytes)`);
             continue;
@@ -103,7 +112,12 @@ export async function POST(request: Request) {
 
     await traverse(tempDir);
 
-    return NextResponse.json({ stats, totalLines });
+    const result = { stats, totalLines };
+
+    // 4. Save to Cache
+    await cache.set(cacheKey, result);
+
+    return NextResponse.json(result);
 
   } catch (error: unknown) {
     console.error('Error processing repository:', error);
