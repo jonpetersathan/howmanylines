@@ -5,6 +5,15 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 
+// Security Constants
+const ALLOWED_DOMAINS = process.env.ALLOWED_DOMAINS
+  ? process.env.ALLOWED_DOMAINS.split(',').map(d => d.trim())
+  : ['github.com', 'gitlab.com', 'bitbucket.org'];
+
+const MAX_FILE_SIZE_BYTES = process.env.MAX_FILE_SIZE
+  ? parseInt(process.env.MAX_FILE_SIZE, 10) * 1024 * 1024
+  : 1024 * 1024; // 1MB
+
 export async function POST(request: Request) {
   let tempDir = '';
   try {
@@ -14,11 +23,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Repository URL is required' }, { status: 400 });
     }
 
-    // Basic URL validation
+    // 1. Strict URL Validation (SSRF Protection)
+    let parsedUrl: URL;
     try {
-      new URL(repoUrl);
+      parsedUrl = new URL(repoUrl);
     } catch {
       return NextResponse.json({ error: 'Invalid URL provided' }, { status: 400 });
+    }
+
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return NextResponse.json({ error: 'Invalid protocol. Only HTTP/HTTPS are allowed.' }, { status: 400 });
+    }
+
+    if (!ALLOWED_DOMAINS.includes(parsedUrl.hostname)) {
+      return NextResponse.json({
+        error: `Domain not allowed. Supported providers: ${ALLOWED_DOMAINS.join(', ')}`
+      }, { status: 400 });
     }
 
     // Create a temporary directory
@@ -51,6 +71,12 @@ export async function POST(request: Request) {
         if (stat.isDirectory()) {
           await traverse(filePath);
         } else if (stat.isFile()) {
+          // 2. Resource Limits (DoS Protection)
+          if (stat.size > MAX_FILE_SIZE_BYTES) {
+            console.warn(`Skipping large file ${filePath} (${stat.size} bytes)`);
+            continue;
+          }
+
           // Check for text files (simple heuristic based on extension or content could be better, but extension is fast)
           // We'll trust extensions for now and maybe skip binary-looking ones if needed.
           // List of common binary extensions to skip
@@ -61,8 +87,6 @@ export async function POST(request: Request) {
 
           try {
             // Read file content
-            // Limit file size to avoid OOM on huge files? 
-            // For now, read as utf-8. If it fails, it might be binary.
             const content = await fs.readFile(filePath, 'utf-8');
             const lines = content.split(/\r\n|\r|\n/).length;
 

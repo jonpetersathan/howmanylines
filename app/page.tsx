@@ -10,11 +10,13 @@ export default function Home() {
   const [stats, setStats] = useState<Record<string, number> | null>(null);
   const [totalLines, setTotalLines] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleAnalyze = async (url: string) => {
     setIsLoading(true);
     setStats(null);
     setTotalLines(0);
+    setError(null);
 
     try {
       const response = await fetch('/api/analyze', {
@@ -35,7 +37,7 @@ export default function Home() {
       setTotalLines(data.totalLines);
     } catch (error) {
       console.error(error);
-      alert(error instanceof Error ? error.message : 'An error occurred');
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -68,6 +70,12 @@ export default function Home() {
         </div>
 
         <RepoInput onAnalyze={handleAnalyze} isLoading={isLoading} />
+
+        {error && (
+          <div className="max-w-xl mx-auto mt-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-center animate-fade-in-up">
+            {error}
+          </div>
+        )}
 
         {stats && (
           <StatsDisplay stats={stats} totalLines={totalLines} />
