@@ -61,6 +61,18 @@ A sleek web application to count lines of code in public Git repositories. Built
 5.  **Open the app**:
     Navigate to [http://localhost:3000](http://localhost:3000).
 
+### Docker
+
+1.  **Build the image**:
+    ```bash
+    docker build -t how-many-lines .
+    ```
+
+2.  **Run the container**:
+    ```bash
+    docker run -p 3000:3000 --env-file .env.local how-many-lines
+    ```
+
 ## License
 
 MIT
