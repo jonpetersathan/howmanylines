@@ -99,50 +99,69 @@ export function StatsDisplay({ stats, totalLines }: StatsDisplayProps) {
         return getCategory(language) === 'Config' ? acc + lines : acc;
     }, 0);
 
+    const totalDocsLines = Object.entries(stats).reduce((acc, [language, lines]) => {
+        return getCategory(language) === 'Docs' ? acc + lines : acc;
+    }, 0);
+
+    const categoriesData = [
+        {
+            label: 'Lines of Code',
+            count: totalCodeLines,
+            icon: Code2,
+            color: 'text-blue-400',
+            bgGradient: 'from-blue-500/10 to-cyan-500/10',
+            textGradient: 'from-blue-400 to-cyan-400'
+        },
+        {
+            label: 'Lines of Config',
+            count: totalConfigLines,
+            icon: FileCode,
+            color: 'text-yellow-400',
+            bgGradient: 'from-yellow-500/10 to-orange-500/10',
+            textGradient: 'from-yellow-400 to-orange-400'
+        },
+        {
+            label: 'Lines of Docs',
+            count: totalDocsLines,
+            icon: FileText,
+            color: 'text-green-400',
+            bgGradient: 'from-green-500/10 to-emerald-500/10',
+            textGradient: 'from-green-400 to-emerald-400'
+        }
+    ].sort((a, b) => b.count - a.count);
+
     return (
-        <div className="w-full max-w-4xl mx-auto mt-12 animate-fade-in-up">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="w-full max-w-6xl mx-auto mt-12 animate-fade-in-up">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
                 {/* Total Lines Card */}
                 <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-2xl p-6 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     <div className="relative flex flex-col items-center justify-center text-center">
                         <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-3 group-hover:scale-110 transition-transform duration-300">
-                            <Hash className="w-6 h-6 text-blue-400" />
+                            <Hash className="w-6 h-6 text-purple-400" />
                         </div>
                         <h3 className="text-gray-600 dark:text-gray-400 font-medium mb-1 text-sm">Total Lines</h3>
-                        <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                        <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
                             {totalLines.toLocaleString()}
                         </p>
                     </div>
                 </div>
 
-                {/* Total Code Lines Card */}
-                <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-2xl p-6 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative flex flex-col items-center justify-center text-center">
-                        <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-3 group-hover:scale-110 transition-transform duration-300">
-                            <Code2 className="w-6 h-6 text-green-400" />
+                {/* Dynamic Category Cards */}
+                {categoriesData.map((category) => (
+                    <div key={category.label} className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-2xl p-6 relative overflow-hidden group">
+                        <div className={`absolute inset-0 bg-gradient-to-br ${category.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                        <div className="relative flex flex-col items-center justify-center text-center">
+                            <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-3 group-hover:scale-110 transition-transform duration-300">
+                                <category.icon className={`w-6 h-6 ${category.color}`} />
+                            </div>
+                            <h3 className="text-gray-600 dark:text-gray-400 font-medium mb-1 text-sm">{category.label}</h3>
+                            <p className={`text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r ${category.textGradient}`}>
+                                {category.count.toLocaleString()}
+                            </p>
                         </div>
-                        <h3 className="text-gray-600 dark:text-gray-400 font-medium mb-1 text-sm">Lines of Code</h3>
-                        <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-400">
-                            {totalCodeLines.toLocaleString()}
-                        </p>
                     </div>
-                </div>
-
-                {/* Total Config Lines Card */}
-                <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-2xl p-6 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative flex flex-col items-center justify-center text-center">
-                        <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-3 group-hover:scale-110 transition-transform duration-300">
-                            <FileCode className="w-6 h-6 text-yellow-400" />
-                        </div>
-                        <h3 className="text-gray-600 dark:text-gray-400 font-medium mb-1 text-sm">Lines of Config</h3>
-                        <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-orange-400">
-                            {totalConfigLines.toLocaleString()}
-                        </p>
-                    </div>
-                </div>
+                ))}
             </div>
 
             {/* Language Breakdown */}
