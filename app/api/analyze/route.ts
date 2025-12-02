@@ -13,11 +13,11 @@ const ALLOWED_DOMAINS = process.env.ALLOWED_DOMAINS
   : ['github.com', 'gitlab.com', 'bitbucket.org'];
 
 const MAX_FILE_SIZE_BYTES = process.env.MAX_FILE_SIZE
-  ? parseInt(process.env.MAX_FILE_SIZE, 10)
+  ? parseInt(process.env.MAX_FILE_SIZE, 10) * 1024 // KB to Bytes
   : 1024 * 1024 * 1; // 1MB
 
-const MAX_REPO_SIZE_BYTES = process.env.MAX_REPO_SIZE_BYTES
-  ? parseInt(process.env.MAX_REPO_SIZE_BYTES, 10)
+const MAX_REPO_SIZE_BYTES = process.env.MAX_REPO_SIZE
+  ? parseInt(process.env.MAX_REPO_SIZE, 10) * 1024 // KB to Bytes
   : 100 * 1024 * 1024; // 100MB
 
 class RepoTooLargeError extends Error {
