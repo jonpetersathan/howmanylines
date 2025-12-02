@@ -13,8 +13,8 @@ const ALLOWED_DOMAINS = process.env.ALLOWED_DOMAINS
   : ['github.com', 'gitlab.com', 'bitbucket.org'];
 
 const MAX_FILE_SIZE_BYTES = process.env.MAX_FILE_SIZE
-  ? parseInt(process.env.MAX_FILE_SIZE, 10) * 1024 * 1024
-  : 1024 * 1024; // 1MB
+  ? parseInt(process.env.MAX_FILE_SIZE, 10)
+  : 1024 * 1024 * 1; // 1MB
 
 const MAX_REPO_SIZE_BYTES = process.env.MAX_REPO_SIZE_BYTES
   ? parseInt(process.env.MAX_REPO_SIZE_BYTES, 10)
@@ -28,9 +28,12 @@ class RepoTooLargeError extends Error {
 }
 
 export async function POST(request: Request) {
+  console.log('Received POST request to /api/analyze');
   let tempDir = '';
   try {
-    const { repoUrl } = await request.json();
+    const body = await request.json();
+    console.log('Request body:', body);
+    const { repoUrl } = body;
 
     if (!repoUrl) {
       return NextResponse.json({ error: 'Repository URL is required' }, { status: 400 });
@@ -98,8 +101,50 @@ export async function POST(request: Request) {
       }
     };
 
+    // Helper to wrap fs promises with retry on EMFILE
+    const wrapGraceful = (fn: any) => {
+      return async (...args: any[]) => {
+        let retries = 10;
+        let delay = 100;
+        while (true) {
+          try {
+            return await fn(...args);
+          } catch (error: any) {
+            if ((error.code === 'EMFILE' || error.code === 'ENFILE') && retries > 0) {
+              retries--;
+              await new Promise(resolve => setTimeout(resolve, delay));
+              delay *= 2;
+              continue;
+            }
+            throw error;
+          }
+        }
+      };
+    };
+
+    const gracefulPromises = Object.fromEntries(
+      Object.entries(fs.promises).map(([key, value]) => [
+        key,
+        typeof value === 'function' ? wrapGraceful(value) : value
+      ])
+    );
+
+    const customFs = {
+      ...fs,
+      symlink: async (_target: string, _path: string) => {
+        // Mock symlink creation to avoid EPERM on Windows
+        return;
+      },
+      promises: {
+        ...gracefulPromises,
+        symlink: async (_target: string, _path: string) => {
+          return;
+        },
+      }
+    };
+
     await git.clone({
-      fs,
+      fs: customFs,
       http: customHttp,
       dir: tempDir,
       url: repoUrl,

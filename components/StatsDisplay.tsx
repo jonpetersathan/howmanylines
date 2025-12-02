@@ -22,7 +22,7 @@ interface StatsDisplayProps {
 export function StatsDisplay({ stats, totalLines }: StatsDisplayProps) {
     const sortedStats = Object.entries(stats)
         .sort(([, a], [, b]) => b - a)
-        .filter(([, lines]) => (lines / totalLines) * 100 >= 0.5);
+        .filter(([, lines]) => (lines / totalLines) * 100 >= 0.1);
 
     const getCategory = (language: string): string => {
         return LANGUAGE_TO_CATEGORY[language] || 'Other';
