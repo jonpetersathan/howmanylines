@@ -1,4 +1,4 @@
-export type LanguageCategory = 'Code' | 'Config' | 'Docs' | 'Script' | 'Other';
+export type LanguageCategory = 'Code' | 'Config' | 'Docs' | 'Other';
 
 export interface LanguageDefinition {
     name: string;
@@ -73,12 +73,12 @@ export const EXTENSION_MAP: Record<string, LanguageDefinition> = {
     '.sql': { name: 'SQL', category: 'Code' },
 
     // Shell / Scripts
-    '.sh': { name: 'Shell', category: 'Script' },
-    '.bash': { name: 'Shell', category: 'Script' },
-    '.zsh': { name: 'Shell', category: 'Script' },
-    '.bat': { name: 'Batch', category: 'Script' },
-    '.cmd': { name: 'Batch', category: 'Script' },
-    '.ps1': { name: 'PowerShell', category: 'Script' },
+    '.sh': { name: 'Shell', category: 'Code' },
+    '.bash': { name: 'Shell', category: 'Code' },
+    '.zsh': { name: 'Shell', category: 'Code' },
+    '.bat': { name: 'Batch', category: 'Code' },
+    '.cmd': { name: 'Batch', category: 'Code' },
+    '.ps1': { name: 'PowerShell', category: 'Code' },
 
     // Docs
     '.md': { name: 'Markdown', category: 'Docs' },
