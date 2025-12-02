@@ -70,18 +70,40 @@ export async function POST(request: Request) {
 
     // Clone the repository
     console.log(`Cloning ${repoUrl} to ${tempDir}...`);
+
+    const controller = new AbortController();
+    const { signal } = controller;
+    let totalBytesDownloaded = 0;
+
+    const customHttp = {
+      ...http,
+      request: async (args: any) => {
+        const response = await http.request({ ...args, signal });
+        if (response.body) {
+          const originalBody = response.body;
+          const wrappedBody = (async function* () {
+            for await (const chunk of originalBody) {
+              totalBytesDownloaded += chunk.length;
+              if (totalBytesDownloaded > MAX_REPO_SIZE_BYTES) {
+                controller.abort();
+                throw new RepoTooLargeError(`Repository too large. Limit is ${(MAX_REPO_SIZE_BYTES / 1024 / 1024).toFixed(2)}MB`);
+              }
+              yield chunk;
+            }
+          })();
+          response.body = wrappedBody;
+        }
+        return response;
+      }
+    };
+
     await git.clone({
       fs,
-      http,
+      http: customHttp,
       dir: tempDir,
       url: repoUrl,
       singleBranch: true,
       depth: 1,
-      onProgress: (args) => {
-        if (args.phase === 'fetch' && args.loaded > MAX_REPO_SIZE_BYTES) {
-          throw new RepoTooLargeError(`Repository too large. Limit is ${(MAX_REPO_SIZE_BYTES / 1024 / 1024).toFixed(2)}MB`);
-        }
-      }
     });
 
     // Count lines
@@ -143,7 +165,7 @@ export async function POST(request: Request) {
     console.error('Error processing repository:', error);
 
     // Handle RepoTooLargeError specifically
-    if (error instanceof RepoTooLargeError || (error instanceof Error && error.name === 'RepoTooLargeError')) {
+    if (error instanceof RepoTooLargeError || (error instanceof Error && error.name === 'RepoTooLargeError') || (error instanceof Error && error.name === 'AbortError')) {
       const errorMessage = error instanceof Error ? error.message : 'Repository too large';
 
       // Attempt to cache the error if we can parse the URL again (safe fallback)
@@ -205,6 +227,29 @@ function getLanguageFromExtension(ext: string): string {
     '.bat': 'Batch',
     '.ps1': 'PowerShell',
     '.dockerfile': 'Dockerfile',
+    '.dart': 'Dart',
+    '.txt': 'Text',
+    '.doc': 'Word Document',
+    '.docx': 'Word Document',
+    '.kt': 'Kotlin',
+    '.kts': 'Kotlin',
+    '.swift': 'Swift',
+    '.vue': 'Vue',
+    '.svelte': 'Svelte',
+    '.lua': 'Lua',
+    '.pl': 'Perl',
+    '.r': 'R',
+    '.R': 'R',
+    '.ex': 'Elixir',
+    '.exs': 'Elixir',
+    '.hs': 'Haskell',
+    '.scala': 'Scala',
+    '.sol': 'Solidity',
+    '.toml': 'TOML',
+    '.ini': 'INI',
+    '.gradle': 'Gradle',
+    '.rst': 'reStructuredText',
+    '.tex': 'LaTeX',
     '': 'Unknown', // No extension
   };
   return map[ext] || `Other (${ext})`;

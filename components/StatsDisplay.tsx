@@ -1,10 +1,12 @@
 'use client';
 
-import { FileCode, Code2, Hash } from 'lucide-react';
+import { FileCode, Code2, Hash, FileText } from 'lucide-react';
 import {
     SiJavascript, SiTypescript, SiPython, SiC, SiCplusplus,
     SiGo, SiRust, SiRuby, SiPhp, SiHtml5, SiCss3, SiSass, SiLess, SiJson,
-    SiYaml, SiXml, SiMysql, SiGnubash, SiDocker, SiMarkdown
+    SiYaml, SiXml, SiMysql, SiGnubash, SiDocker, SiMarkdown, SiDart,
+    SiKotlin, SiSwift, SiVuedotjs, SiSvelte, SiLua, SiPerl, SiR, SiElixir,
+    SiHaskell, SiScala, SiSolidity, SiLatex
 } from 'react-icons/si';
 import { FaJava } from 'react-icons/fa';
 import { TbBrandCSharp } from 'react-icons/tb';
@@ -47,6 +49,25 @@ export function StatsDisplay({ stats, totalLines }: StatsDisplayProps) {
             'PowerShell': 'Script',
             'Dockerfile': 'Config',
             'Markdown': 'Docs',
+            'Dart': 'Code',
+            'Text': 'Docs',
+            'Word Document': 'Docs',
+            'Kotlin': 'Code',
+            'Swift': 'Code',
+            'Vue': 'Code',
+            'Svelte': 'Code',
+            'Lua': 'Code',
+            'Perl': 'Code',
+            'R': 'Code',
+            'Elixir': 'Code',
+            'Haskell': 'Code',
+            'Scala': 'Code',
+            'Solidity': 'Code',
+            'TOML': 'Config',
+            'INI': 'Config',
+            'Gradle': 'Config',
+            'reStructuredText': 'Docs',
+            'LaTeX': 'Code',
         };
         return categories[language] || 'Other';
     };
@@ -89,6 +110,25 @@ export function StatsDisplay({ stats, totalLines }: StatsDisplayProps) {
             'PowerShell': VscTerminalPowershell,
             'Dockerfile': SiDocker,
             'Markdown': SiMarkdown,
+            'Dart': SiDart,
+            'Text': FileText,
+            'Word Document': FileText,
+            'Kotlin': SiKotlin,
+            'Swift': SiSwift,
+            'Vue': SiVuedotjs,
+            'Svelte': SiSvelte,
+            'Lua': SiLua,
+            'Perl': SiPerl,
+            'R': SiR,
+            'Elixir': SiElixir,
+            'Haskell': SiHaskell,
+            'Scala': SiScala,
+            'Solidity': SiSolidity,
+            'TOML': FileCode,
+            'INI': FileCode,
+            'Gradle': SiGnubash, // Using shell icon as fallback/close match
+            'reStructuredText': FileText,
+            'LaTeX': SiLatex,
         };
         return icons[language] || FileCode;
     };
