@@ -93,33 +93,6 @@ export async function POST(request: Request) {
     // const controller = new AbortController(); // Moved to top level
     // const { signal } = controller; // Moved to top level
 
-    let totalBytesDownloaded = 0;
-
-    const customHttp = {
-      ...http,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      request: async (args: any) => {
-        if (signal.aborted) {
-          throw new Error('AbortError');
-        }
-        const response = await http.request({ ...args, signal });
-        if (response.body) {
-          const originalBody = response.body;
-          const wrappedBody = (async function* () {
-            for await (const chunk of originalBody) {
-              if (signal.aborted) {
-                throw new Error('AbortError');
-              }
-              totalBytesDownloaded += chunk.length;
-              yield chunk;
-            }
-          })();
-          response.body = wrappedBody;
-        }
-        return response;
-      }
-    };
-
     // Helper to wrap fs promises with retry on EMFILE
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const wrapGraceful = (fn: any) => {
@@ -169,7 +142,7 @@ export async function POST(request: Request) {
 
     await git.clone({
       fs: customFs,
-      http: customHttp,
+      http,
       dir: tempDir,
       url: repoUrl,
       singleBranch: true,
@@ -229,13 +202,25 @@ export async function POST(request: Request) {
 
     const result = { stats, totalLines };
 
-    // 4. Save to Cache
+    // Helper to calculate directory size
+    async function getDirectorySize(dir: string): Promise<number> {
+      const files = await fs.readdir(dir);
+      const stats = files.map(async (file) => {
+        const filePath = path.join(dir, file);
+        const stat = await fs.stat(filePath);
+        if (stat.isDirectory()) return getDirectorySize(filePath);
+        return stat.size;
+      });
+      return (await Promise.all(stats)).reduce((acc, size) => acc + size, 0);
+    }
+
     // 4. Save to Cache with Variable TTL
+    const repoSize = await getDirectorySize(tempDir);
     const ttl = Math.max(
       CACHE_TTL_MIN_SECONDS,
-      Math.ceil(totalBytesDownloaded * CACHE_TTL_PER_BYTE)
+      Math.ceil(repoSize * CACHE_TTL_PER_BYTE)
     );
-    console.log(`Caching ${repoUrl} for ${ttl} seconds (size: ${totalBytesDownloaded} bytes)`);
+    console.log(`Caching ${repoUrl} for ${ttl} seconds (size: ${repoSize} bytes)`);
     await cache.set(cacheKey, result, ttl);
 
     return NextResponse.json(result);
