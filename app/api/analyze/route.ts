@@ -31,10 +31,11 @@ class RepoTooLargeError extends Error {
 export async function POST(request: Request) {
   console.log('Received POST request to /api/analyze');
   let tempDir = '';
+  let repoUrl: string | undefined;
   try {
     const body = await request.json();
     console.log('Request body:', body);
-    const { repoUrl } = body;
+    repoUrl = body.repoUrl;
 
     if (!repoUrl) {
       return NextResponse.json({ error: 'Repository URL is required' }, { status: 400 });
@@ -229,7 +230,6 @@ export async function POST(request: Request) {
 
       // Attempt to cache the error if we can parse the URL again (safe fallback)
       try {
-        const { repoUrl } = await request.clone().json();
         if (repoUrl) {
           const cacheKey = `repo:${repoUrl}`;
           await cache.set(cacheKey, { error: errorMessage });

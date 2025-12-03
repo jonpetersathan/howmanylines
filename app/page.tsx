@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { RepoInput } from '@/components/RepoInput';
 import { StatsDisplay } from '@/components/StatsDisplay';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { Github } from 'lucide-react';
 
 export default function Home() {
   const [stats, setStats] = useState<Record<string, number> | null>(null);
@@ -74,8 +73,8 @@ export default function Home() {
 
       <div className="relative z-10 container mx-auto px-4 py-20">
         <div className="text-center mb-16 animate-fade-in-down">
-          <div className="inline-flex items-center justify-center p-3 bg-white dark:bg-gray-900/50 rounded-2xl mb-6 border border-gray-200 dark:border-gray-800 backdrop-blur-sm shadow-xl">
-            <Github className="w-8 h-8 text-gray-900 dark:text-white" />
+          <div className="mb-8">
+            <img src="/logo.png" alt="App Icon" className="w-24 h-24 mx-auto" />
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
             How Many <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">Lines?</span>
