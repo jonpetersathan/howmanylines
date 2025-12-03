@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { RepoInput } from '@/components/RepoInput';
 import { StatsDisplay } from '@/components/StatsDisplay';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -74,7 +75,7 @@ export default function Home() {
       <div className="relative z-10 container mx-auto px-4 py-20">
         <div className="text-center mb-16 animate-fade-in-down">
           <div className="mb-8">
-            <img src="/logo.png" alt="App Icon" className="w-24 h-24 mx-auto" />
+            <Image src="/logo.png" alt="App Icon" width={96} height={96} className="mx-auto" />
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
             How Many <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">Lines?</span>

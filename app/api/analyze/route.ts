@@ -207,7 +207,7 @@ export async function POST(request: Request) {
       const files = await fs.readdir(dir);
       const stats = files.map(async (file) => {
         const filePath = path.join(dir, file);
-        const stat = await fs.stat(filePath);
+        const stat = await limit(() => fs.stat(filePath));
         if (stat.isDirectory()) return getDirectorySize(filePath);
         return stat.size;
       });

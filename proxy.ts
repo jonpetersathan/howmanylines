@@ -19,9 +19,8 @@ export function proxy(request: NextRequest) {
     response.headers.set('Content-Security-Policy', "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline';");
 
     // 2. Rate Limiting (Only for API routes)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (request.nextUrl.pathname.startsWith('/api/analyze')) {
-        const ip = (request as any).ip || request.headers.get('x-forwarded-for') || '127.0.0.1';
+        const ip = (request as { ip?: string }).ip || request.headers.get('x-forwarded-for') || '127.0.0.1';
         const now = Date.now();
         const record = rateLimit.get(ip) || { count: 0, lastReset: now };
 
