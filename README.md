@@ -2,7 +2,7 @@
 
 A sleek web application to count lines of code in public Git repositories. Built with Next.js and Tailwind CSS.
 
-![App Demo](C:/Users/Jonathan/.gemini/antigravity/brain/d1d1d026-53a5-47d8-837b-4188719c56da/app_demo_1764607655956.webp)
+![App Demo](app_demo.mp4)
 
 ## Features
 
