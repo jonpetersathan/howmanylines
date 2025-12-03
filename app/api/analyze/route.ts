@@ -13,26 +13,37 @@ const ALLOWED_DOMAINS = process.env.ALLOWED_DOMAINS
   ? process.env.ALLOWED_DOMAINS.split(',').map(d => d.trim())
   : ['github.com', 'gitlab.com', 'bitbucket.org'];
 
-const MAX_FILE_SIZE_BYTES = process.env.MAX_FILE_SIZE
-  ? parseInt(process.env.MAX_FILE_SIZE, 10) * 1024 // KB to Bytes
-  : 1024 * 1024 * 1; // 1MB
+const CACHE_TTL_MIN_SECONDS = process.env.CACHE_TTL_MIN_SECONDS
+  ? parseInt(process.env.CACHE_TTL_MIN_SECONDS, 10)
+  : 86400; // 1 day
 
-const MAX_REPO_SIZE_BYTES = process.env.MAX_REPO_SIZE
-  ? parseInt(process.env.MAX_REPO_SIZE, 10) * 1024 // KB to Bytes
-  : 100 * 1024 * 1024; // 100MB
+const CACHE_TTL_PER_BYTE = process.env.CACHE_TTL_PER_BYTE
+  ? parseFloat(process.env.CACHE_TTL_PER_BYTE)
+  : 0.01; // 10 second per 1000 bytes
 
-class RepoTooLargeError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'RepoTooLargeError';
-  }
-}
+const ANALYSIS_TIMEOUT_SECONDS = process.env.ANALYSIS_TIMEOUT_SECONDS
+  ? parseInt(process.env.ANALYSIS_TIMEOUT_SECONDS, 10)
+  : 60; // 1 minute
+
+const CACHE_TTL_ON_TIMEOUT = process.env.CACHE_TTL_ON_TIMEOUT
+  ? parseInt(process.env.CACHE_TTL_ON_TIMEOUT, 10)
+  : 31536000; // 1 year
+
 
 export async function POST(request: Request) {
   console.log('Received POST request to /api/analyze');
   let tempDir = '';
   let repoUrl: string | undefined;
+  const controller = new AbortController();
+  const { signal } = controller;
+
+  // Set analysis timeout
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, ANALYSIS_TIMEOUT_SECONDS * 1000);
+
   try {
+
     const body = await request.json();
     console.log('Request body:', body);
     repoUrl = body.repoUrl;
@@ -74,29 +85,32 @@ export async function POST(request: Request) {
     }
 
     // Create a temporary directory
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'git-line-counter-'));
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'howmanylines-'));
 
     // Clone the repository
     console.log(`Cloning ${repoUrl} to ${tempDir}...`);
 
-    const controller = new AbortController();
-    const { signal } = controller;
+    // const controller = new AbortController(); // Moved to top level
+    // const { signal } = controller; // Moved to top level
+
     let totalBytesDownloaded = 0;
 
     const customHttp = {
       ...http,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       request: async (args: any) => {
+        if (signal.aborted) {
+          throw new Error('AbortError');
+        }
         const response = await http.request({ ...args, signal });
         if (response.body) {
           const originalBody = response.body;
           const wrappedBody = (async function* () {
             for await (const chunk of originalBody) {
-              totalBytesDownloaded += chunk.length;
-              if (totalBytesDownloaded > MAX_REPO_SIZE_BYTES) {
-                controller.abort();
-                throw new RepoTooLargeError(`Repository too large. Limit is ${(MAX_REPO_SIZE_BYTES / 1024 / 1024).toFixed(2)}MB`);
+              if (signal.aborted) {
+                throw new Error('AbortError');
               }
+              totalBytesDownloaded += chunk.length;
               yield chunk;
             }
           })();
@@ -111,6 +125,9 @@ export async function POST(request: Request) {
     const wrapGraceful = (fn: any) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return async (...args: any[]) => {
+        if (signal.aborted) {
+          throw new Error('AbortError');
+        }
         let retries = 10;
         let delay = 100;
         while (true) {
@@ -177,11 +194,7 @@ export async function POST(request: Request) {
         if (stat.isDirectory()) {
           await traverse(filePath);
         } else if (stat.isFile()) {
-          // 3. Resource Limits (DoS Protection)
-          if (stat.size > MAX_FILE_SIZE_BYTES) {
-            console.warn(`Skipping large file ${filePath} (${stat.size} bytes)`);
-            return;
-          }
+          // 3. Resource Limits (DoS Protection) - Size limit removed
 
           const ext = path.extname(file).toLowerCase();
           let languageName = '';
@@ -217,33 +230,41 @@ export async function POST(request: Request) {
     const result = { stats, totalLines };
 
     // 4. Save to Cache
-    await cache.set(cacheKey, result);
+    // 4. Save to Cache with Variable TTL
+    const ttl = Math.max(
+      CACHE_TTL_MIN_SECONDS,
+      Math.ceil(totalBytesDownloaded * CACHE_TTL_PER_BYTE)
+    );
+    console.log(`Caching ${repoUrl} for ${ttl} seconds (size: ${totalBytesDownloaded} bytes)`);
+    await cache.set(cacheKey, result, ttl);
 
     return NextResponse.json(result);
 
   } catch (error: unknown) {
-    console.error('Error processing repository:', error);
-
-    // Handle RepoTooLargeError specifically
-    if (error instanceof RepoTooLargeError || (error instanceof Error && error.name === 'RepoTooLargeError') || (error instanceof Error && error.name === 'AbortError')) {
-      const errorMessage = error instanceof Error ? error.message : 'Repository too large';
+    // Handle AbortError (Timeout) specifically
+    if ((error instanceof Error && error.name === 'AbortError') || (error instanceof Error && error.message === 'AbortError')) {
+      const errorMessage = `Analysis timed out after ${ANALYSIS_TIMEOUT_SECONDS} seconds`;
+      console.warn(`Analysis timed out for ${repoUrl}. Caching error for ${CACHE_TTL_ON_TIMEOUT} seconds.`);
 
       // Attempt to cache the error if we can parse the URL again (safe fallback)
       try {
         if (repoUrl) {
           const cacheKey = `repo:${repoUrl}`;
-          await cache.set(cacheKey, { error: errorMessage });
+          await cache.set(cacheKey, { error: errorMessage }, CACHE_TTL_ON_TIMEOUT);
         }
       } catch (e) {
         console.error('Failed to cache error state:', e);
       }
 
-      return NextResponse.json({ error: errorMessage }, { status: 400 });
+      return NextResponse.json({ error: errorMessage }, { status: 408 }); // 408 Request Timeout
     }
+
+    console.error('Error processing repository:', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to process repository';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   } finally {
+    clearTimeout(timeoutId);
     // Cleanup
     if (tempDir) {
       try {

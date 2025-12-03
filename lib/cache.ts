@@ -2,16 +2,15 @@ import { LRUCache } from 'lru-cache';
 import Redis from 'ioredis';
 
 // Configuration
-const CACHE_TTL_SECONDS = process.env.CACHE_TTL_SECONDS
-    ? parseInt(process.env.CACHE_TTL_SECONDS, 10)
-    : 24 * 60 * 60; // Default 24 hours
+// Configuration
+const DEFAULT_TTL = 24 * 60 * 60; // Default 24 hours
 
 const REDIS_URL = process.env.REDIS_URL;
 
 // Interfaces
 interface CacheService {
     get<T>(key: string): Promise<T | null>;
-    set<T>(key: string, value: T): Promise<void>;
+    set<T>(key: string, value: T, ttl?: number): Promise<void>;
 }
 
 // Memory Cache Implementation
@@ -22,7 +21,7 @@ class MemoryCacheImpl implements CacheService {
     constructor() {
         this.cache = new LRUCache({
             max: 100, // Max 100 items in memory
-            ttl: CACHE_TTL_SECONDS * 1000,
+            ttl: DEFAULT_TTL * 1000,
         });
     }
 
@@ -30,8 +29,8 @@ class MemoryCacheImpl implements CacheService {
         return (this.cache.get(key) as T) || null;
     }
 
-    async set<T>(key: string, value: T): Promise<void> {
-        this.cache.set(key, value);
+    async set<T>(key: string, value: T, ttl?: number): Promise<void> {
+        this.cache.set(key, value, { ttl: ttl ? ttl * 1000 : undefined });
     }
 }
 
@@ -48,15 +47,15 @@ class RedisCacheImpl implements CacheService {
         return data ? JSON.parse(data) : null;
     }
 
-    async set<T>(key: string, value: T): Promise<void> {
-        await this.redis.set(key, JSON.stringify(value), 'EX', CACHE_TTL_SECONDS);
+    async set<T>(key: string, value: T, ttl?: number): Promise<void> {
+        await this.redis.set(key, JSON.stringify(value), 'EX', ttl || DEFAULT_TTL);
     }
 }
 
 // Factory
 let cacheService: CacheService;
 
-if (CACHE_TTL_SECONDS === 0) {
+if (process.env.CACHE_DISABLED === 'true') {
     // Caching disabled
     cacheService = {
         get: async () => null,
